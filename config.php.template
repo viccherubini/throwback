@@ -1,0 +1,17 @@
+<?php
+
+return array(
+    'parameters' => array(
+        'key1' => 'value1',
+        'key2' => 'value2'
+    ),
+    'databases' => array(
+        'db1' => array(
+            'driver' => 'pdo_pgsql',
+            'host' => 'localhost',
+            'database' => 'db_name',
+            'username' => 'db_username',
+            'password' => 'db_password'
+        )
+    )
+);

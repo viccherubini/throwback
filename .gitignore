@@ -1,0 +1,4 @@
+*.swp
+*.phar
+config.php
+commands

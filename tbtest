@@ -1,0 +1,424 @@
+#!/usr/bin/env php
+<?php
+
+// Global setup.
+define('TBTEST_VERSION', '0.0.3');
+define('TBTEST_BIN', basename($argv[0]));
+
+// Always print the version and author.
+tbtVersion();
+
+if (isset($argv[1]) && 'help' == $argv[1]) {
+    tbtUsage();
+}
+
+try {
+    // Attempt to find the configuration file.
+    $configurationFile = getenv('HOME') . DIRECTORY_SEPARATOR . '.tbtest/config.php';
+
+    if (!is_file($configurationFile)) {
+        throw new RuntimeException(sprintf("Please create a configuration file named 'config.php' in %s.", dirname($configurationFile)));
+    }
+
+    $testDirectory = getcwd();
+
+    if (isset($argv[1])) {
+        if (!is_dir($argv[1])) {
+            throw new RuntimeException(sprintf("The directory '%s' does not exist.", $argv[1]));
+        } else {
+            $testDirectory = $argv[1];
+        }
+    }
+
+    $configuration = require_once $configurationFile;
+
+    $runner = new TBTestRunner($configuration, $testDirectory);
+    $runner->run();
+} catch (Exception $e) {
+    tbtExit($e->getMessage());
+}
+
+// Test runner.
+class TBTestRunner
+{
+
+    /** @var array */
+    private $configuration = array();
+
+    /** @var string */
+    private $testDirectory;
+
+    /** @var integer */
+    private $totalAssertionsCount = 0;
+
+    /** @var integer */
+    private $failedAssertionsCount = 0;
+
+    /** @var integer */
+    private $passedAssertionsCount = 0;
+
+    /** @const string */
+    const ASSERTION_TEMPLATE = '[%s] %s in %s::%s on line %d.';
+
+    /** @const string */
+    const GLOB_TEMPLATE = '*_test.php';
+
+    /** @const string */
+    const METHOD_PREFIX = 'test';
+
+    /** @const string */
+    const RESULT_FAILED = 'FAIL';
+
+    /** @const string */
+    const RESULT_PASSED = 'PASS';
+
+    public function __construct($configuration, $testDirectory)
+    {
+        if (!is_array($configuration)) {
+            throw new RuntimeException("Configuration must be a PHP array.");
+        }
+
+        if (!array_key_exists('parameters', $configuration)) {
+            throw new RuntimeException("Configuration must have a top level 'parameters' key.");
+        }
+
+        if (!array_key_exists('databases', $configuration)) {
+            throw new RuntimeException("Configuration must have a top level 'databases' key.");
+        }
+
+        $this->configuration = $configuration;
+        $this->testDirectory = $testDirectory;
+    }
+
+    public function run()
+    {
+        $startTime = microtime(true);
+
+        // Generate a glob search string for test files.
+        $searchString = $this->testDirectory . DIRECTORY_SEPARATOR . self::GLOB_TEMPLATE;
+
+        // Search for files to test.
+        $files = glob($searchString);
+
+        if (0 === count($files)) {
+            throw new RuntimeException(sprintf("No test files found in '%s'. Files must match the pattern '%s'.", $this->testDirectory, self::GLOB_TEMPLATE));
+        }
+
+        foreach ($files as $file) {
+            // Create a list of existing classes to easily
+            // compare new classes as they are loaded.
+            $classes = get_declared_classes();
+
+            // Load in each test file.
+            require_once $file;
+
+            // Determine the new classes included.
+            $newClasses = array_diff(get_declared_classes(), $classes);
+
+            // If there are no new classes, throw an exception.
+            if (0 === count($newClasses)) {
+                throw new RuntimeException(sprintf("The test file '%s' does not contain any test classes.", $file));
+            }
+
+            // Ensure at least one class extends TBTest.
+            $testClasses = array();
+
+            foreach ($newClasses as $newClass) {
+                $classParents = class_parents($newClass, false);
+
+                if (array_key_exists('TBTest', $classParents)) {
+                    $testClasses[] = $newClass;
+                }
+            }
+
+            if (0 === count($testClasses)) {
+                throw new RuntimeException("None of the files included extend the TBTest base test class.");
+            }
+
+            $this->writeLn("Testing " . basename($file));
+
+            // Go through each test class and execute the tests.
+            foreach ($testClasses as $testClass) {
+                $refClass = new ReflectionClass($testClass);
+                $testObject = $refClass->newInstance($this->configuration);
+
+                $refObject = new ReflectionObject($testObject);
+                $testMethods = $refObject->getMethods(ReflectionMethod::IS_PUBLIC);
+
+                foreach ($testMethods as $testMethod) {
+                    if (0 === stripos($testMethod->getName(), self::METHOD_PREFIX)) {
+                        $testMethod->invoke($testObject);
+                    }
+                }
+
+                $assertions = $testObject->getAssertions();
+
+                $this->countAssertions($assertions);
+                $this->writeAssertions($assertions);
+            }
+
+            $this->writeLn();
+        }
+
+        $runTime = (string)round((microtime(true) - $startTime), 4);
+
+        // Output some final stats.
+        $assertionTemplate = 'Tested %d %s in %s seconds. %d PASSED, %d FAILED';
+        $assertionText = (1 === $this->totalAssertionsCount ? 'assertion' : 'assertions');
+        $assertionText = sprintf(
+            $assertionTemplate,
+            $this->totalAssertionsCount,
+            $assertionText,
+            $runTime,
+            $this->passedAssertionsCount,
+            $this->failedAssertionsCount
+        );
+
+        $this->writeLn($assertionText);
+        $this->writeLn();
+
+        return true;
+    }
+
+    private function writeLn($string = '', $indent = false)
+    {
+        if ($indent) {
+            $string = sprintf("   %s", $string);
+        }
+
+        echo($string . PHP_EOL);
+
+        return true;
+    }
+
+    private function writeAssertions($assertions)
+    {
+        foreach ($assertions as $assertion) {
+            $resultText = ($assertion['passed'] ? self::RESULT_PASSED : self::RESULT_FAILED);
+
+            $assertionText = sprintf(
+                self::ASSERTION_TEMPLATE,
+                $resultText,
+                $assertion['assertion'],
+                $assertion['class'],
+                $assertion['method'],
+                $assertion['line']
+            );
+
+            $this->writeLn($assertionText, true);
+        }
+
+        return true;
+    }
+
+    private function countAssertions($assertions)
+    {
+        foreach ($assertions as $assertion) {
+            $this->totalAssertionsCount += 1;
+
+            if ($assertion['passed']) {
+                $this->passedAssertionsCount += 1;
+            } else {
+                $this->failedAssertionsCount += 1;
+            }
+        }
+
+        return true;
+    }
+
+}
+
+abstract class TBTest
+{
+
+    /** @var array */
+    private $assertions = array();
+
+    /** @var array */
+    private $configuration = array();
+
+    /** @var array */
+    private $databases = array();
+
+    /** @var string */
+    const DRIVER_MYSQL = 'pdo_mysql';
+
+    /** @var string */
+    const DRIVER_PGSQL = 'pdo_pgsql';
+
+    public function __construct($configuration = array())
+    {
+        $this->configuration = $configuration;
+    }
+
+    public function __destruct()
+    {
+        foreach ($this->databases as $database) {
+            $database = null;
+        }
+
+        $this->databases = array();
+    }
+
+    public function runCmd($command, $argv = array())
+    {
+        $arguments = null;
+
+        if (!is_array($argv)) {
+            $argv = array($argv);
+        }
+
+        if (is_array($argv) && count($argv) > 0) {
+            $arguments = implode(' ', $argv);
+        }
+
+        $commandSafe = escapeshellcmd(trim(sprintf('%s %s', $command, $arguments)));
+        $commandOutput = shell_exec($commandSafe);
+
+        return $commandOutput;
+    }
+
+    public function assertEmpty($actual)
+    {
+        $this->addAssertion(empty($actual), 'assertEmpty');
+    }
+
+    public function assertNotEmpty($actual)
+    {
+        $this->addAssertion(!empty($actual), 'assertNotEmpty');
+    }
+
+    public function assertEquals($expected, $actual)
+    {
+        $this->addAssertion(($expected === $actual), 'assertEquals');
+    }
+
+    public function assertNotEquals($expected, $actual)
+    {
+        $this->addAssertion(($expected !== $actual), 'assertNotEquals');
+    }
+
+    public function assertTrue($actual)
+    {
+        $this->addAssertion((true === $actual), 'assertTrue');
+
+        return true;
+    }
+
+    public function assertFalse($actual)
+    {
+        $this->addAssertion((false === $actual), 'assertFalse');
+    }
+
+    public function assertContains($haystack, $needle)
+    {
+        $this->addAssertion((false !== strpos($haystack, $needle)), 'assertContains');
+    }
+
+    public function getAssertions()
+    {
+        return $this->assertions;
+    }
+
+    protected function getCmd($file, $command)
+    {
+        $command = dirname($file) . DIRECTORY_SEPARATOR . $command;
+
+        return $command;
+    }
+
+    protected function getDatabase($name)
+    {
+        if (!array_key_exists($name, $this->databases)) {
+            if (!array_key_exists($name, $this->configuration['databases'])) {
+                throw new RuntimeException(sprintf("The database '%s' does not exist in the configuration.", $name));
+            }
+
+            $options = $this->configuration['databases'][$name];
+
+            if (!in_array($options['driver'], get_loaded_extensions())) {
+                throw new RuntimeException(sprintf("The database driver '%s' is not supported.", $options['driver']));
+            }
+
+            if (self::DRIVER_MYSQL == $options['driver']) {
+                $dsnTemplate = 'mysql:host=%s;dbname=%s';
+                $dsn = sprintf(
+                    $dsnTemplate,
+                    $options['host'],
+                    $options['database']
+                );
+
+                $db = new PDO($dsn, $options['username'], $options['password']);
+            } elseif (self::DRIVER_PGSQL == $options['driver']) {
+                $dsnTemplate = 'pgsql:host=%s;dbname=%s;user=%s;password=%s';
+                $dsn = sprintf(
+                    $dsnTemplate,
+                    $options['host'],
+                    $options['database'],
+                    $options['username'],
+                    $options['password']
+                );
+
+                $db = new PDO($dsn);
+            }
+
+            $this->databases[$name] = $db;
+        }
+
+        return $this->databases[$name];
+    }
+
+    protected function getParameter($name)
+    {
+        if (array_key_exists($name, $this->configuration['parameters'])) {
+            return $this->configuration['parameters'][$name];
+        }
+
+        return null;
+    }
+
+    private function addAssertion($passed, $assertion)
+    {
+        $backtrace = debug_backtrace();
+
+        if (isset($backtrace[2])) {
+            $this->assertions[] = array(
+                'passed' => $passed,
+                'assertion' => $assertion,
+                'class' => $backtrace[2]['class'],
+                'method' => $backtrace[2]['function'],
+                'line' => $backtrace[1]['line']
+            );
+        }
+
+        return true;
+    }
+
+}
+
+function tbtExit($message)
+{
+    echo(trim($message) . PHP_EOL . PHP_EOL);
+
+    exit(1);
+}
+
+function tbtVersion()
+{
+    echo("TBTest " . TBTEST_VERSION . " by Vic Cherubini" . PHP_EOL . PHP_EOL);
+
+    return true;
+}
+
+function tbtUsage()
+{
+    echo("Usage: " . TBTEST_BIN . " <test_directory>" . PHP_EOL . PHP_EOL);
+    echo("  <test_directory>     Optionally runs tests against *_test.php files in this directory." . PHP_EOL);
+    echo("                       Runs tests against the current working directory if this argument is empty." . PHP_EOL . PHP_EOL);
+    echo("  " . TBTEST_BIN . " attempts to locate the configuration file in \$HOME/.tbtest/config.php." . PHP_EOL);
+    echo("  The tests will not execute if the configuration file is not located there." . PHP_EOL . PHP_EOL);
+
+    exit(1);
+}
+
+exit(0);
