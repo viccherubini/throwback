@@ -46,6 +46,8 @@ You run your tests by running the `throwback` command with an optional argument 
 * `throwback`
 * `throwback /path/to/directory/to/test`
 
+After installing the Throwback configuration file properly, you can run `./throwback examples` from within the repository to see example test execution.
+
 ## Writing Tests
 Throwback borrows from Go's testing philosophy in that every file suffixed with `_test.php` in a specific directory is considered a test and executed as so. Each file ending in `_test.php` should have a single class in it that extends the `ThrowbackTestCase` class that Throwback provides (you can have multiple classes in a single file, but organizing your tests like that makes them harder to manage). Each test class name must be unique within a specific directory.
 
