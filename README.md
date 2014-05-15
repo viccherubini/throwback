@@ -6,7 +6,7 @@ Like a lot of PHP developers, I frequently work on very outdated code that is no
 
 Throwback is a new simple to use library for testing these applications. You can test your application two ways: through it's command line interface (if it has one) or through your classes and methods (similar to PHPUnit).
 
-If your application makes use of a lot of CLI commands, Throwback can be used to execute a specific command and test the output or test the expected result in a database or on the filesystem.
+Throwback can be used to test a specific command in your application. You can test the output directly, or test how the command maniuplates the database or filesystem.
 
 ## Usage
 The goal of Throwback is to be small, simple, and easy to implement. Because it is primarily for older software, it does not require Composer, and only requires PHP 5.1.0 or greater (with a minimal amount of core modules, and no outside userland dependencies). If you wish to configure it with a database, you will need the `pdo_pgsql` or `pdo_mysql` extensions installed.
