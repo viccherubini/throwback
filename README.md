@@ -58,6 +58,7 @@ Use the `runCmd()` method to test a command.
 
 #### runCmd()
 `runCmd($command, $argv = array())`
+
 Runs a system command specified by `$command` optionally passing all of the parameters of `$argv` to it. Each element of `$argv` should be the full parameter passed in. For example, if a command requires the path to a file, `$argv` might look like this:
 
 ```php
