@@ -2,8 +2,8 @@
 <?php
 
 // Global setup.
-define('TBTEST_VERSION', '0.0.3');
-define('TBTEST_BIN', basename($argv[0]));
+define('THROWBACK_VERSION', '0.0.3');
+define('THROWBACK_BIN', basename($argv[0]));
 
 // Always print the version and author.
 tbtVersion();
@@ -14,7 +14,7 @@ if (isset($argv[1]) && 'help' == $argv[1]) {
 
 try {
     // Attempt to find the configuration file.
-    $configurationFile = getenv('HOME') . DIRECTORY_SEPARATOR . '.tbtest/config.php';
+    $configurationFile = getenv('HOME') . DIRECTORY_SEPARATOR . '.throwback/config.php';
 
     if (!is_file($configurationFile)) {
         throw new RuntimeException(sprintf("Please create a configuration file named 'config.php' in %s.", dirname($configurationFile)));
@@ -32,14 +32,14 @@ try {
 
     $configuration = require_once $configurationFile;
 
-    $runner = new TBTestRunner($configuration, $testDirectory);
+    $runner = new ThrowbackTestRunner($configuration, $testDirectory);
     $runner->run();
 } catch (Exception $e) {
     tbtExit($e->getMessage());
 }
 
 // Test runner.
-class TBTestRunner
+class ThrowbackTestRunner
 {
 
     /** @var array */
@@ -120,19 +120,19 @@ class TBTestRunner
                 throw new RuntimeException(sprintf("The test file '%s' does not contain any test classes.", $file));
             }
 
-            // Ensure at least one class extends TBTest.
+            // Ensure at least one class extends ThrowbackTestCase.
             $testClasses = array();
 
             foreach ($newClasses as $newClass) {
                 $classParents = class_parents($newClass, false);
 
-                if (array_key_exists('TBTest', $classParents)) {
+                if (array_key_exists('ThrowbackTestCase', $classParents)) {
                     $testClasses[] = $newClass;
                 }
             }
 
             if (0 === count($testClasses)) {
-                throw new RuntimeException("None of the files included extend the TBTest base test class.");
+                throw new RuntimeException("None of the files included extend the ThrowbackTestCase base test class.");
             }
 
             $this->writeLn("Testing " . basename($file));
@@ -228,7 +228,7 @@ class TBTestRunner
 
 }
 
-abstract class TBTest
+abstract class ThrowbackTestCase
 {
 
     /** @var array */
@@ -405,17 +405,17 @@ function tbtExit($message)
 
 function tbtVersion()
 {
-    echo("TBTest " . TBTEST_VERSION . " by Vic Cherubini" . PHP_EOL . PHP_EOL);
+    echo("Throwback " . THROWBACK_VERSION . " by Vic Cherubini" . PHP_EOL . PHP_EOL);
 
     return true;
 }
 
 function tbtUsage()
 {
-    echo("Usage: " . TBTEST_BIN . " <test_directory>" . PHP_EOL . PHP_EOL);
+    echo("Usage: " . THROWBACK_BIN . " <test_directory>" . PHP_EOL . PHP_EOL);
     echo("  <test_directory>     Optionally runs tests against *_test.php files in this directory." . PHP_EOL);
     echo("                       Runs tests against the current working directory if this argument is empty." . PHP_EOL . PHP_EOL);
-    echo("  " . TBTEST_BIN . " attempts to locate the configuration file in \$HOME/.tbtest/config.php." . PHP_EOL);
+    echo("  " . THROWBACK_BIN . " attempts to locate the configuration file in \$HOME/.tbtest/config.php." . PHP_EOL);
     echo("  The tests will not execute if the configuration file is not located there." . PHP_EOL . PHP_EOL);
 
     exit(1);
