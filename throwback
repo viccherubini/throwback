@@ -33,10 +33,12 @@ try {
     $configuration = require_once $configurationFile;
 
     $runner = new ThrowbackTestRunner($configuration, $testDirectory);
-    $runner->run();
+    $exitCode = $runner->run();
 } catch (Exception $e) {
     ThrowbackTestRunner::exitMessage($e->getMessage());
 }
+
+exit($exitCode);
 
 class ThrowbackTestRunner
 {
@@ -179,7 +181,13 @@ class ThrowbackTestRunner
         $this->writeLn($assertionText);
         $this->writeLn();
 
-        return true;
+        if ($this->failedAssertionsCount > 0) {
+            $exitCode = 1;
+        } else {
+            $exitCode = 0;
+        }
+
+        return $exitCode;
     }
 
     public static function exitMessage($message)
@@ -425,5 +433,3 @@ abstract class ThrowbackTestCase
     }
 
 }
-
-exit(0);
