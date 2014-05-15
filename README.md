@@ -19,7 +19,7 @@ To install Throwback, place the `throwback` command from this repository anywher
 After the `throwback` command is installed, create a directory in your `$HOME` directory named `.throwback`. Copy the `config.php.template` file from this repository to the `.throwback` directory as `config.php`. You are required to retain the top level `parameters` and `databases` keys even if they point to empty arrays.
 
 #### Parameters
-The `parameters` key in the configuration file is for injecting any key-value pair into your tests. This array is executed once at run-time, so you generally can't put dynamically generated values in it. Each test can get a parameter by calling:
+The `parameters` key in the configuration file is for injecting any key-value pair into your tests. This array is executed once at run-time, so you generally can't put dynamically generated values in it. Each test can get a parameter by calling
 
 ```php
 $this->getParameter('name')
@@ -47,7 +47,7 @@ You run your tests by running the `throwback` command with an optional argument 
 * `throwback /path/to/directory/to/test`
 
 ## Writing Tests
-Throwback borrows from Go's testing philosophy in that every file suffixed with `_test.php` is considered a test and executed as so. Each file ending in `_test.php` should have a single class in it that extends the `ThrowbackTestCase` class that Throwback provides (you can have multiple classes in a single file, but organizing your tests like that makes them harder to manage). Each test class name must be unique within a specific directory.
+Throwback borrows from Go's testing philosophy in that every file suffixed with `_test.php` in a specific directory is considered a test and executed as so. Each file ending in `_test.php` should have a single class in it that extends the `ThrowbackTestCase` class that Throwback provides (you can have multiple classes in a single file, but organizing your tests like that makes them harder to manage). Each test class name must be unique within a specific directory.
 
 All public, non-static methods that begin with `test` in the class are considered testable.
 
