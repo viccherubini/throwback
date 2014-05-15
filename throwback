@@ -2,14 +2,13 @@
 <?php
 
 // Global setup.
-define('THROWBACK_VERSION', '0.0.3');
 define('THROWBACK_BIN', basename($argv[0]));
 
 // Always print the version and author.
-tbtVersion();
+ThrowbackTestRunner::version();
 
 if (isset($argv[1]) && 'help' == $argv[1]) {
-    tbtUsage();
+    ThrowbackTestRunner::usage();
 }
 
 try {
@@ -35,7 +34,7 @@ try {
     $runner = new ThrowbackTestRunner($configuration, $testDirectory);
     $runner->run();
 } catch (Exception $e) {
-    tbtExit($e->getMessage());
+    ThrowbackTestRunner::exitMessage($e->getMessage());
 }
 
 // Test runner.
@@ -56,6 +55,9 @@ class ThrowbackTestRunner
 
     /** @var integer */
     private $passedAssertionsCount = 0;
+
+    /** @const string */
+    const VERSION = '0.0.3';
 
     /** @const string */
     const ASSERTION_TEMPLATE = '[%s] %s in %s::%s on line %d.';
@@ -135,7 +137,7 @@ class ThrowbackTestRunner
                 throw new RuntimeException("None of the files included extend the ThrowbackTestCase base test class.");
             }
 
-            $this->writeLn("Testing " . basename($file));
+            self::writeLn("Testing " . basename($file));
 
             // Go through each test class and execute the tests.
             foreach ($testClasses as $testClass) {
@@ -157,7 +159,7 @@ class ThrowbackTestRunner
                 $this->writeAssertions($assertions);
             }
 
-            $this->writeLn();
+            self::writeLn();
         }
 
         $runTime = (string)round((microtime(true) - $startTime), 4);
@@ -180,13 +182,41 @@ class ThrowbackTestRunner
         return true;
     }
 
-    private function writeLn($string = '', $indent = false)
+    public static function exitMessage($message)
+    {
+        self::writeLn(trim($message));
+
+        exit(1);
+    }
+
+    public static function usage()
+    {
+        $bin = basename(__FILE__);
+
+        self::writeLn("Usage: " . $bin . " [<test_directory>]", false, 2);
+        self::writeLn("<test_directory>   Runs tests against *_test.php in this directory; current working directory if not specified.", true, 2);
+        self::writeLn("Throwback attempts to locate the configuration file in \$HOME/.throwback/config.php.", true);
+        self::writeLn("The tests will not execute if the configuration file is not located there.", true, 2);
+
+        exit(1);
+    }
+
+    public static function version()
+    {
+        self::writeLn("Throwback " . self::VERSION . " by Vic Cherubini", false, 2);
+
+        return true;
+    }
+
+    private static function writeLn($string = '', $indent = false, $newlines = 1)
     {
         if ($indent) {
             $string = sprintf("   %s", $string);
         }
 
-        echo($string . PHP_EOL);
+        $newlines = str_repeat(PHP_EOL, (int)$newlines);
+
+        echo($string . $newlines);
 
         return true;
     }
@@ -205,7 +235,7 @@ class ThrowbackTestRunner
                 $assertion['line']
             );
 
-            $this->writeLn($assertionText, true);
+            self::writeLn($assertionText, true);
         }
 
         return true;
@@ -394,31 +424,6 @@ abstract class ThrowbackTestCase
         return true;
     }
 
-}
-
-function tbtExit($message)
-{
-    echo(trim($message) . PHP_EOL . PHP_EOL);
-
-    exit(1);
-}
-
-function tbtVersion()
-{
-    echo("Throwback " . THROWBACK_VERSION . " by Vic Cherubini" . PHP_EOL . PHP_EOL);
-
-    return true;
-}
-
-function tbtUsage()
-{
-    echo("Usage: " . THROWBACK_BIN . " <test_directory>" . PHP_EOL . PHP_EOL);
-    echo("  <test_directory>     Optionally runs tests against *_test.php files in this directory." . PHP_EOL);
-    echo("                       Runs tests against the current working directory if this argument is empty." . PHP_EOL . PHP_EOL);
-    echo("  " . THROWBACK_BIN . " attempts to locate the configuration file in \$HOME/.tbtest/config.php." . PHP_EOL);
-    echo("  The tests will not execute if the configuration file is not located there." . PHP_EOL . PHP_EOL);
-
-    exit(1);
 }
 
 exit(0);
