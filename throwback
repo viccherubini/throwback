@@ -1,9 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-// Global setup.
-define('THROWBACK_BIN', basename($argv[0]));
-
 // Always print the version and author.
 ThrowbackTestRunner::version();
 
