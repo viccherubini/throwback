@@ -71,7 +71,7 @@ The `runCmd()` method also has a helper method named `getCmd()`. The `getCmd()` 
 
 ```php
 $command = $this->getCmd(__FILE__, 'import_data.php');
-$output = $this->runCmd('php', array($command, 'arg2', 'arg3'));
+$output = $this->runCmd('php', array($command, '--file-path=/path/to/file', '--verbose'));
 ```
 
 The above example would produce a value in `$command` similar to:
@@ -83,7 +83,7 @@ The above example would produce a value in `$command` similar to:
 The complete command executed would look like this:
 
 ```shell
-php '/var/apps/my-app/commands/import_data.php' 'arg2' 'arg3'
+php '/var/apps/my-app/commands/import_data.php' '--file-path=/path/to/file' '--verbose'
 ```
 
 Obviously, `runCmd()` returns the output of the command. What you do with the output is up to you. You can assert that it matches some expected value, or test the database that the command did what it said it would, or both!
@@ -125,6 +125,9 @@ Asserts that `$actual` is exactly equal to `false` using PHP's `===` operator.
 `assertContains($haystack, $needle)`
 
 Asserts that `$haystack` contains `$needle` using PHP's `strpos()` method. Matching is case sensitive.
+
+## Conclusion
+Throwback is most definitely for legacy applications. You should be using more modern tactics when starting a new application. However, that's just not possible for a lot of programmers out there managing decade old code. Throwback is a perfect solution to that problem because it works with old versions of PHP and requires very little system integration.
 
 ## License
 The MIT License (MIT)
