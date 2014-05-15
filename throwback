@@ -19,6 +19,7 @@ try {
         throw new RuntimeException(sprintf("Please create a configuration file named 'config.php' in %s.", dirname($configurationFile)));
     }
 
+    // Attempt to determine the test directory.
     $testDirectory = getcwd();
 
     if (isset($argv[1])) {
@@ -37,7 +38,6 @@ try {
     ThrowbackTestRunner::exitMessage($e->getMessage());
 }
 
-// Test runner.
 class ThrowbackTestRunner
 {
 
@@ -276,7 +276,7 @@ abstract class ThrowbackTestCase
     /** @var string */
     const DRIVER_PGSQL = 'pdo_pgsql';
 
-    public function __construct($configuration = array())
+    public function __construct($configuration)
     {
         $this->configuration = $configuration;
     }
